@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Market Scanner</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Source+Serif+4:wght@700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --primary-color: #D4AF37; /* Gold */
+            --text-color: #E0E0E0;
+            --card-bg: #1E1E1E;
+            --border-color: #333;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top left, rgba(212, 175, 55, 0.05), transparent 40%),
+                        radial-gradient(circle at bottom right, rgba(212, 175, 55, 0.05), transparent 40%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .scanner-wrapper {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            border: 2px solid var(--primary-color);
+            min-width: 180px;
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.2rem;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        
+        .btn:disabled {
+            background-color: var(--border-color);
+            color: #888;
+            border-color: var(--border-color);
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: #000;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: transparent;
+            color: var(--primary-color);
+        }
+        
+        /* Modal for Donation */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: auto;
+            padding: 30px;
+            border: 1px solid var(--primary-color);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        .close-btn {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-content label { display: block; margin-top: 10px; }
+        .modal-content input, .modal-content select, .modal-content button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+        }
+        
+        .modal-content button {
+            background: var(--primary-color);
+            color: #000;
+            font-family: 'Source Serif 4', serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        #response {
+            margin-top: 20px;
+            padding: 10px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            min-height: 44px; /* To prevent layout shift */
+            overflow-y: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Market Scanner Styles */
+        .uploader-container {
+            border: 2px dashed var(--primary-color);
+            border-radius: 10px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .uploader-container:hover {
+            background-color: rgba(212, 175, 55, 0.05);
+        }
+
+        .uploader-container label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .uploader-container i {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .preview-container {
+            margin: 1.5rem 0;
+            max-height: 45vh;
+            overflow: hidden;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        #chart-preview {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            max-height: 45vh;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scanner-result {
+            margin-top: 20px;
+            padding: 1.5rem;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            text-align: left;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scanner-result .loader {
+            border: 4px solid var(--border-color);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        #response .loader-small {
+            border: 3px solid var(--border-color);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary-color);
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .scanner-result small {
+            margin-top: 1rem;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 600px) {
+            .card {
+                padding: 1.5rem;
+                border: none;
+                background: transparent;
+            }
+
+            .scanner-wrapper {
+                padding: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .uploader-container {
+                padding: 1.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+
+    <main class="scanner-wrapper">
+        <div class="card">
+            <h1 style="color: var(--primary-color); margin-bottom: 0.5rem;">AI Market Scanner</h1>
+            <p style="margin-bottom: 1.5rem;">Upload a market chart image and our AI will provide a brief analysis on potential positions.</p>
+            
+            <div id="uploader-container" class="uploader-container">
+                <input type="file" id="chart-uploader" accept="image/*" style="display: none;">
+                <label for="chart-uploader">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Click to upload or drag and drop</span>
+                </label>
+            </div>
+
+            <div id="preview-container" class="preview-container" style="display: none;">
+                <img id="chart-preview" src="#" alt="Chart Preview">
+            </div>
+            
+            <div class="button-group">
+                <button id="unlockBtn" class="btn btn-primary">Unlock Scan With $1</button>
+            </div>
+
+            <div id="scanner-result" class="scanner-result">
+                <p>Please upload a chart to begin.</p>
+                <small>Disclaimer: This is not financial advice. AI analysis can be inaccurate.</small>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Donation Modal -->
+    <div id="donationModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Unlock with $1 Payment</h2>
+
+            <label for="phone">Phone:</label>
+            <input type="text" id="phone" placeholder="Phone" value="0770001110">
+
+            <button id="sendPaymentBtn">Send Payment</button>
+            
+            <div id="response">Waiting for transaction...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { GoogleGenAI } from "@google/genai";
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Get all interactive elements from the DOM
+            const modal = document.getElementById('donationModal');
+            const unlockBtn = document.getElementById('unlockBtn');
+            const closeBtn = document.querySelector('.close-btn');
+            const sendPaymentBtn = document.getElementById('sendPaymentBtn');
+
+            const uploaderInput = document.getElementById('chart-uploader');
+            const uploaderContainer = document.getElementById('uploader-container');
+            const previewContainer = document.getElementById('preview-container');
+            const chartPreview = document.getElementById('chart-preview');
+            const scannerResult = document.getElementById('scanner-result');
+
+            if (
+                modal && unlockBtn && closeBtn && sendPaymentBtn &&
+                uploaderInput && uploaderContainer && previewContainer && chartPreview && scannerResult
+            ) {
+                let uploadedFile = null;
+
+                const fileToPart = async (file) => {
+                    const base64EncodedData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const result = reader.result;
+                            if (typeof result === 'string' && result.includes(',')) {
+                                resolve(result.split(',')[1]);
+                            } else {
+                                reject(new Error('File could not be read or is in an invalid format.'));
+                            }
+                        };
+                        reader.onerror = () => reject(new Error('An error occurred while reading the file.'));
+                        reader.readAsDataURL(file);
+                    });
+                    return {
+                        inlineData: {
+                            data: base64EncodedData,
+                            mimeType: file.type,
+                        },
+                    };
+                };
+
+                const scanChart = async () => {
+                    if (!uploadedFile) {
+                        scannerResult.innerHTML = `<p style="color: #ff6b6b;">Please upload an image first.</p>`;
+                        return;
+                    }
+
+                    scannerResult.innerHTML = `<div class="loader"></div><p>Scanning chart... This may take a moment.</p>`;
+
+                    try {
+                        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                        
+                        const imagePart = await fileToPart(uploadedFile);
+
+                        const response = await ai.models.generateContent({
+                            model: 'gemini-flash-latest',
+                            contents: { 
+                                parts: [
+                                    { text: "Analyze this market chart and briefly tell me how many positions to enter. Provide a short, direct recommendation. This is not financial advice." },
+                                    imagePart
+                                ] 
+                            },
+                            config: {
+                                temperature: 0.1,
+                            },
+                        });
+
+                        const resultText = response.text;
+                        scannerResult.innerHTML = `<p>${resultText}</p><small>Disclaimer: This is not financial advice. AI analysis can be inaccurate.</small>`;
+
+                    } catch (error) {
+                        console.error(error);
+                        scannerResult.innerHTML = `<p style="color: #ff6b6b;">An error occurred during analysis. Please try again.</p><small>${error.message}</small>`;
+                    }
+                };
+                
+                // --- Event Listeners Setup ---
+
+                // Payment Modal Listeners
+                unlockBtn.addEventListener('click', () => {
+                    if (!uploadedFile) {
+                        scannerResult.innerHTML = `<p style="color: #ff6b6b;">Please upload a chart image before unlocking.</p>`;
+                        return;
+                    }
+                    modal.style.display = 'flex';
+                });
+
+                const resetModal = () => {
+                    modal.style.display = 'none';
+                    sendPaymentBtn.disabled = false; // Re-enable button on close
+                    const responseDiv = document.getElementById('response');
+                    if (responseDiv) responseDiv.innerText = 'Waiting for transaction...';
+                }
+
+                closeBtn.addEventListener('click', resetModal);
+                window.addEventListener('click', (event) => {
+                    if (event.target == modal) {
+                        resetModal();
+                    }
+                });
+                
+                // --- REAL Payment Logic ---
+                sendPaymentBtn.addEventListener('click', async () => {
+                    const responseDiv = document.getElementById('response');
+                    const phoneInput = document.getElementById('phone');
+                    const DOMAIN = "https://Divinex.pythonanywhere.com";
+
+                    if (!responseDiv || !phoneInput) return;
+
+                    const phoneValue = phoneInput.value.trim();
+                    if (phoneValue === "") {
+                        responseDiv.innerText = "Please enter a phone number.";
+                        return;
+                    }
+
+                    responseDiv.innerHTML = `<div class="loader-small"></div> Initiating payment...`;
+                    sendPaymentBtn.disabled = true;
+
+                    let pollingTimeout;
+                    let pollInterval;
+
+                    const cleanup = () => {
+                        clearInterval(pollInterval);
+                        clearTimeout(pollingTimeout);
+                    };
+
+                    try {
+                        // 1. Initiate payment via the /pay endpoint.
+                        const initResponse = await fetch(`${DOMAIN}/pay`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ phone: phoneValue, amount: 1 })
+                        });
+
+                        if (!initResponse.ok) {
+                            const errorData = await initResponse.json().catch(() => ({ message: 'Server returned an error.' }));
+                            throw new Error(errorData.message || 'Failed to initiate payment.');
+                        }
+
+                        const initData = await initResponse.json();
+
+                        if (initData.status !== 'success' || !initData.poll_url) {
+                            throw new Error(initData.message || 'Invalid response from payment server.');
+                        }
+
+                        const pollUrl = initData.poll_url;
+                        responseDiv.innerHTML = `<div class="loader-small"></div> ${initData.instructions || 'Waiting for payment confirmation...'}`;
+
+                        // 2. Poll for payment status using the /status endpoint.
+                        pollInterval = setInterval(async () => {
+                            try {
+                                const statusResponse = await fetch(`${DOMAIN}/status`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'text/plain', // Use text/plain to bypass potential proxy issues.
+                                        'Accept': 'application/json',
+                                    },
+                                    body: JSON.stringify({ poll_url: pollUrl })
+                                });
+                                
+                                if (!statusResponse.ok) {
+                                    console.error('Polling request failed, will retry.');
+                                    return; 
+                                }
+
+                                const statusData = await statusResponse.json();
+                                const paymentStatus = statusData.status ? statusData.status.toLowerCase() : 'unknown';
+
+                                if (paymentStatus === 'paid') {
+                                    cleanup();
+                                    responseDiv.innerText = "Payment successful! Analyzing your chart...";
+                                    setTimeout(() => {
+                                        resetModal();
+                                        scanChart();
+                                    }, 1500);
+                                } else if (['cancelled', 'failed', 'disputed'].includes(paymentStatus)) {
+                                    cleanup();
+                                    throw new Error(`Payment ${paymentStatus}.`);
+                                }
+                                // If status is 'created', 'sent', 'pending', etc. do nothing and wait for the next poll.
+                            } catch (pollError) {
+                                 cleanup();
+                                 responseDiv.innerText = `An error occurred: ${pollError.message}`;
+                                 sendPaymentBtn.disabled = false;
+                            }
+                        }, 3000); // Poll every 3 seconds
+
+                        // Timeout polling after 2 minutes to prevent infinite loops.
+                        pollingTimeout = setTimeout(() => {
+                            cleanup();
+                            responseDiv.innerText = 'Payment confirmation timed out. Please try again.';
+                            sendPaymentBtn.disabled = false;
+                        }, 120000);
+
+                    } catch (error) {
+                        cleanup();
+                        responseDiv.innerText = `An error occurred: ${error.message}`;
+                        sendPaymentBtn.disabled = false;
+                    }
+                });
+
+
+                // File Uploader Listeners
+                const handleFileSelect = (file) => {
+                    if (file && file.type.startsWith('image/')) {
+                        uploadedFile = file;
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            if (e.target?.result) {
+                                chartPreview.src = e.target.result;
+                            }
+                            previewContainer.style.display = 'block';
+                            uploaderContainer.style.display = 'none';
+                            scannerResult.innerHTML = `<p>Image loaded. Click "Unlock Scan With $1" for analysis.</p><small>Disclaimer: This is not financial advice. AI analysis can be inaccurate.</small>`;
+                        };
+                        reader.onerror = () => {
+                            scannerResult.innerHTML = `<p style="color: #ff6b6b;">Could not read the selected file. Please try another image.</p>`;
+                            uploadedFile = null;
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        scannerResult.innerHTML = `<p style="color: #ff6b6b;">Please select a valid image file.</p>`;
+                        uploadedFile = null;
+                    }
+                };
+
+                uploaderContainer.addEventListener('click', () => {
+                    uploaderInput.click();
+                });
+
+                uploaderInput.addEventListener('change', (event) => {
+                    const files = event.target.files;
+                    if (files && files.length > 0) {
+                        handleFileSelect(files[0]);
+                    }
+                });
+
+                // Drag and Drop
+                uploaderContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploaderContainer.style.backgroundColor = 'rgba(212, 175, 55, 0.05)';
+                });
+                uploaderContainer.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploaderContainer.style.backgroundColor = 'transparent';
+                });
+                uploaderContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploaderContainer.style.backgroundColor = 'transparent';
+                    const files = e.dataTransfer?.files;
+                    if (files && files.length > 0) {
+                        handleFileSelect(files[0]);
+                    }
+                });
+            }
+        });
+    </script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
